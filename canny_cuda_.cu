@@ -1,5 +1,5 @@
 // Compile & Run:
-// nvcc canny_cuda_speedup_fixed.cu -arch=sm_60 -lcudart && ./a.out
+// nvcc canny_cuda_.cu -arch=sm_60 -lcudart && ./a.out
 
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
