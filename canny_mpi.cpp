@@ -13,19 +13,22 @@ using namespace std;
 int width, height;
 double sig = 1.0;
 
-bool readPGM(const string& filename, double*& img) {
+bool readPGM(const string &filename, double *&img)
+{
     ifstream infile(filename, ios::binary);
-    if (!infile) return false;
+    if (!infile)
+        return false;
 
     string magic;
     int maxVal;
     infile >> magic >> width >> height >> maxVal;
     infile.ignore();
 
-    if (magic != "P5") return false;
+    if (magic != "P5")
+        return false;
 
-    unsigned char* buffer = new unsigned char[width * height];
-    infile.read((char*)buffer, width * height);
+    unsigned char *buffer = new unsigned char[width * height];
+    infile.read((char *)buffer, width * height);
     infile.close();
 
     img = new double[width * height];
@@ -36,32 +39,41 @@ bool readPGM(const string& filename, double*& img) {
     return true;
 }
 
-void savePGM(const string& filename, double* image, int width, int height) {
+void savePGM(const string &filename, double *image, int width, int height)
+{
     ofstream outfile(filename, ios::binary);
-    outfile << "P5\n" << width << " " << height << "\n255\n";
+    outfile << "P5\n"
+            << width << " " << height << "\n255\n";
 
-    unsigned char* outputBuffer = new unsigned char[width * height];
+    unsigned char *outputBuffer = new unsigned char[width * height];
     double maxVal = *max_element(image, image + (width * height));
-    if (maxVal == 0) maxVal = 1;
+    if (maxVal == 0)
+        maxVal = 1;
 
     for (int i = 0; i < width * height; i++)
         outputBuffer[i] = static_cast<unsigned char>((image[i] / maxVal) * 255.0);
 
-    outfile.write((char*)outputBuffer, width * height);
+    outfile.write((char *)outputBuffer, width * height);
     delete[] outputBuffer;
 }
 
-void convolve(double* input, double* output, int local_height, int width, int dim, double** maskX, double** maskY) {
+void convolve(double *input, double *output, int local_height, int width, int dim, double **maskX, double **maskY)
+{
     int cent = dim / 2;
 
-    for (int i = cent; i < local_height - cent; i++) {
-        for (int j = 0; j < width; j++) {
+    for (int i = cent; i < local_height - cent; i++)
+    {
+        for (int j = 0; j < width; j++)
+        {
             double sumX = 0.0, sumY = 0.0;
-            for (int p = -cent; p <= cent; p++) {
-                for (int q = -cent; q <= cent; q++) {
+            for (int p = -cent; p <= cent; p++)
+            {
+                for (int q = -cent; q <= cent; q++)
+                {
                     int y = i + p;
                     int x = j + q;
-                    if (x >= 0 && x < width && y >= 0 && y < local_height) {
+                    if (x >= 0 && x < width && y >= 0 && y < local_height)
+                    {
                         sumX += input[y * width + x] * maskX[p + cent][q + cent];
                         sumY += input[y * width + x] * maskY[p + cent][q + cent];
                     }
@@ -72,22 +84,25 @@ void convolve(double* input, double* output, int local_height, int width, int di
     }
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv)
+{
     MPI_Init(&argc, &argv);
     int rank, numProcs;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 
-    double* fullImage = nullptr;
-    double* fullOutput = nullptr;
+    double *fullImage = nullptr;
+    double *fullOutput = nullptr;
 
     int dim = 6 * sig + 1;
     int cent = dim / 2;
 
     double totalStart = MPI_Wtime(); // Total timer start
 
-    if (rank == 0) {
-        if (!readPGM("chess.pgm", fullImage)) {
+    if (rank == 0)
+    {
+        if (!readPGM("chess.pgm", fullImage))
+        {
             cout << "Failed to load image\n";
             MPI_Abort(MPI_COMM_WORLD, 1);
         }
@@ -102,40 +117,51 @@ int main(int argc, char** argv) {
 
     vector<int> sendCounts(numProcs), displs(numProcs);
     int offset = 0;
-    for (int i = 0; i < numProcs; i++) {
+    for (int i = 0; i < numProcs; i++)
+    {
         int rows = rowsPerProc + (i < extra ? 1 : 0);
         sendCounts[i] = (rows + 2 * cent) * width;
         displs[i] = (offset - cent) * width;
         offset += rows;
     }
 
-    double* localInput = new double[local_height * width];
-    double* localOutput = new double[(local_height - 2 * cent) * width];
+    double *localInput = new double[local_height * width];
+    double *localOutput = new double[(local_height - 2 * cent) * width];
 
-    if (rank == 0) {
-        for (int i = 0; i < numProcs; i++) {
+    if (rank == 0)
+    {
+        for (int i = 0; i < numProcs; i++)
+        {
             int startRow = displs[i] / width;
             int sendRows = sendCounts[i] / width;
 
-            if (i == 0) {
+            if (i == 0)
+            {
                 memcpy(localInput, fullImage, sendCounts[0] * sizeof(double));
-            } else {
+            }
+            else
+            {
                 MPI_Send(&fullImage[startRow * width], sendCounts[i], MPI_DOUBLE, i, 0, MPI_COMM_WORLD);
             }
         }
-    } else {
+    }
+    else
+    {
         MPI_Recv(localInput, local_height * width, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
 
-    double** maskX = new double*[dim];
-    double** maskY = new double*[dim];
-    for (int i = 0; i < dim; ++i) {
+    double **maskX = new double *[dim];
+    double **maskY = new double *[dim];
+    for (int i = 0; i < dim; ++i)
+    {
         maskX[i] = new double[dim];
         maskY[i] = new double[dim];
     }
 
-    for (int p = -cent; p <= cent; ++p) {
-        for (int q = -cent; q <= cent; ++q) {
+    for (int p = -cent; p <= cent; ++p)
+    {
+        for (int q = -cent; q <= cent; ++q)
+        {
             double val = exp(-((p * p + q * q) / (2 * sig * sig)));
             maskX[p + cent][q + cent] = q * val;
             maskY[p + cent][q + cent] = p * val;
@@ -152,14 +178,16 @@ int main(int argc, char** argv) {
 
     vector<int> recvCounts(numProcs), recvDispls(numProcs);
     offset = 0;
-    for (int i = 0; i < numProcs; i++) {
+    for (int i = 0; i < numProcs; i++)
+    {
         int rows = rowsPerProc + (i < extra ? 1 : 0);
         recvCounts[i] = rows * width;
         recvDispls[i] = offset * width;
         offset += rows;
     }
 
-    if (rank == 0) fullOutput = new double[width * height];
+    if (rank == 0)
+        fullOutput = new double[width * height];
 
     MPI_Gatherv(localOutput, (local_height - 2 * cent) * width, MPI_DOUBLE,
                 fullOutput, recvCounts.data(), recvDispls.data(), MPI_DOUBLE,
@@ -172,7 +200,8 @@ int main(int argc, char** argv) {
     vector<double> allTimes(numProcs);
     MPI_Gather(&localTime, 1, MPI_DOUBLE, allTimes.data(), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-    if (rank == 0) {
+    if (rank == 0)
+    {
         cout << "\n========= Timing Report =========\n";
         for (int i = 0; i < numProcs; i++)
             cout << "Process " << i << " computation time: " << allTimes[i] << " seconds\n";
@@ -184,7 +213,8 @@ int main(int argc, char** argv) {
         cout << "=================================\n";
     }
 
-    for (int i = 0; i < dim; ++i) {
+    for (int i = 0; i < dim; ++i)
+    {
         delete[] maskX[i];
         delete[] maskY[i];
     }
@@ -192,7 +222,8 @@ int main(int argc, char** argv) {
     delete[] maskY;
     delete[] localInput;
     delete[] localOutput;
-    if (rank == 0) {
+    if (rank == 0)
+    {
         delete[] fullImage;
         delete[] fullOutput;
     }
