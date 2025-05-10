@@ -5,3 +5,7 @@ This is my parallel CUDA and MPI implementation of Canny's Edge Detection algori
 ## Usage
 Using the program is fairly simple. Start by downloading or cloning the repo. I already have two sample images that can be used, however, you can use your own pictures. Just make sure to copy them into the "input_images" folder and that they're in the .pgm format.
 
+## OpenMP Implementation
+
+This is the OpenMP implementation of the Canny Edge Detector:  
+[https://github.com/ishankkumar-007/canny-parallel](https://github.com/ishankkumar-007/canny-parallel)
