@@ -8,4 +8,4 @@ Using the program is fairly simple. Start by downloading or cloning the repo. I 
 ## OpenMP Implementation
 
 This is the OpenMP implementation of the Canny Edge Detector:  
-[https://github.com/ishankkumar-007/canny-parallel](https://github.com/ishankkumar-007/canny-parallel)
+[https://github.com/ishankkumar-007/canny-OpenMP](https://github.com/ishankkumar-007/canny_OpenMP)
